@@ -4,7 +4,8 @@ import { config } from './config';
 
 async function main() {
   await mongoose.connect(config.mongoUri);
-  createApp().listen(config.port, () => {
+
+  createApp().listen(config.port, '0.0.0.0', () => {
     console.log(`API listening on :${config.port}`);
   });
 }
