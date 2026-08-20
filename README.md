@@ -1,79 +1,161 @@
 # Task Tracker — Backend
 
-REST API for the Task Tracker app: JWT authentication, owner-scoped task CRUD, filtering/search/sorting/pagination, and an analytics endpoint. Built with Node.js, Express 5, TypeScript, and MongoDB (Mongoose 9).
+REST API for the Task Tracker app with JWT authentication, owner-scoped task management, filtering, search, sorting, pagination, and analytics. Built with Node.js, Express 5, TypeScript, and MongoDB (Mongoose).
 
-Frontend lives in the sibling repo `task-tracker-frontend`.
-
-## GitHub
-
-To publish the project on GitHub, push both repositories separately:
-
-- Backend: this repo
-- Frontend: the sibling `task-tracker-frontend` repo
+This backend powers the frontend project in the sibling repository and is designed for local development, testing, and deployment.
 
 ## Setup
 
-Prerequisites: Node 20+, Docker (for MongoDB).
+Prerequisites:
+
+- Node.js 20+
+- MongoDB running locally or via Docker
+
+### 1. Start MongoDB
 
 ```bash
-docker compose up -d          # starts MongoDB on localhost:27017
-cp .env.example .env          # PORT, MONGO_URI, JWT_SECRET
-npm install
-npm run dev                   # API on http://localhost:4000
+docker compose up -d
 ```
 
-Tests need no running MongoDB — they use an in-memory server:
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure environment
+
+Create a `.env` file using the sample values from `.env.example`:
+
+```bash
+PORT=4000
+MONGO_URI=mongodb://localhost:27017/task-tracker
+JWT_SECRET=your-super-secret-key
+```
+
+### 4. Run the API
+
+```bash
+npm run dev
+```
+
+The API runs at:
+
+```bash
+http://localhost:4000/api
+```
+
+### 5. Useful commands
 
 ```bash
 npm test
+npm run build
+npm start
 ```
 
-Production build: `npm run build && npm start`.
+## Render deployment
 
-## Render
+This repo includes a `render.yaml` file for deployment on Render.
 
-This repo includes a `render.yaml` blueprint for deploying the API as a Render web service.
+Required environment variables:
 
-Required environment variables on Render:
+- `MONGO_URI`
+- `JWT_SECRET`
 
-- `MONGO_URI` pointing to a reachable MongoDB instance
-- `JWT_SECRET` set to a strong secret
+Health check endpoint:
 
-Health check path: `/api/health`
+```bash
+/api/health
+```
 
-## API
+## API endpoints
 
-Base URL: `http://localhost:4000/api`. Authenticated routes require `Authorization: Bearer <token>`.
+Base URL:
 
-All errors share one shape: `{ "error": { "message": "...", "code": "..." } }` (validation errors add a `details` array of `{path, message}`).
+```bash
+http://localhost:4000/api
+```
 
-### Auth
+All routes requiring authentication expect a bearer token in the request header:
 
-| Method | Path | Auth | Body | Response |
-|---|---|---|---|---|
-| POST | `/auth/signup` | — | `{name, email, password}` (password ≥ 8 chars) | `201 {token, user}` · `409 EMAIL_TAKEN` |
-| POST | `/auth/login` | — | `{email, password}` | `200 {token, user}` · `401 INVALID_CREDENTIALS` |
-| GET | `/auth/me` | ✓ | — | `200 {user}` |
+```http
+Authorization: Bearer <token>
+```
 
-`user` is `{id, name, email}`. Tokens are JWTs (`{sub: userId}`, 7-day expiry).
+### Auth routes
 
-### Tasks
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/auth/signup` | Create a new user account |
+| POST | `/auth/login` | Sign in and receive a JWT |
+| GET | `/auth/me` | Get the current authenticated user |
 
-Task shape: `{_id, title, description, status, priority, dueDate, createdAt, updatedAt}` with `status ∈ todo|in_progress|done`, `priority ∈ low|medium|high`, `dueDate` an ISO date or `null`.
+### Task routes
 
-| Method | Path | Auth | Body / Query | Response |
-|---|---|---|---|---|
-| GET | `/tasks` | ✓ | query: `status`, `priority`, `search`, `sortBy=dueDate\|priority\|createdAt`, `order=asc\|desc`, `page` (≥1), `limit` (1–50) | `200 {tasks, total, page, totalPages}` |
-| POST | `/tasks` | ✓ | `{title, description?, status?, priority?, dueDate?}` | `201 {task}` |
-| GET | `/tasks/stats` | ✓ | — | `200 {total, byStatus, completed, pending, completionPercentage, overdue}` |
-| GET | `/tasks/:id` | ✓ | — | `200 {task}` · `404 TASK_NOT_FOUND` |
-| PUT | `/tasks/:id` | ✓ | any subset of task fields; `dueDate: null` clears it | `200 {task}` |
-| PATCH | `/tasks/:id/complete` | ✓ | — | `200 {task}` (status set to `done`) |
-| DELETE | `/tasks/:id` | ✓ | — | `204` |
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/tasks` | Fetch paginated, filtered, and sorted tasks |
+| POST | `/tasks` | Create a new task |
+| GET | `/tasks/stats` | Fetch task analytics and summary values |
+| GET | `/tasks/:id` | Get a single task by ID |
+| PUT | `/tasks/:id` | Update a task |
+| PATCH | `/tasks/:id/complete` | Mark a task as complete |
+| DELETE | `/tasks/:id` | Delete a task |
 
-List defaults: `sortBy=createdAt`, `order=desc`, `page=1`, `limit=10`. `search` is a case-insensitive substring match on title. Priority sorts semantically (low < medium < high), not alphabetically. `overdue` counts tasks with `dueDate` in the past and status ≠ done; `pending` = total − done.
+### Task payloads
+
+A task contains fields such as:
+
+```json
+{
+  "title": "Finish resume",
+  "description": "Update projects and skills section",
+  "status": "in_progress",
+  "priority": "medium",
+  "dueDate": "2026-08-22"
+}
+```
+
+Supported status values:
+
+- `todo`
+- `in_progress`
+- `done`
+
+Supported priority values:
+
+- `low`
+- `medium`
+- `high`
+
+## Error format
+
+API errors are returned in a consistent format:
+
+```json
+{
+  "error": {
+    "message": "Invalid credentials",
+    "code": "INVALID_CREDENTIALS"
+  }
+}
+```
+
+Validation errors include a `details` array with field-specific messages.
 
 ## Design decisions
+
+- The backend uses a layered architecture: routes, controllers, services, and models, making the code easier to test and extend.
+- JWT authentication is stateless and user-scoped, so each request is validated against the token without storing session data on the server.
+- Task ownership is enforced for every task operation to prevent cross-user access.
+- Query logic is centralized so filtering, sorting, and pagination are consistent across list and analytics requests.
+- MongoDB indexes are used on user-scoped task queries to keep list and stats queries efficient.
+- Tests run with an in-memory MongoDB instance so the API can be validated without external infrastructure.
+
+## Notes
+
+- This API is intentionally simple and production-friendly for a personal task manager.
+- Frontend authentication is handled by storing the JWT client-side and attaching it to authenticated request
 
 - **Layered layout** — `routes → controllers → models`, with middleware for auth and a single global error handler. Controllers parse input with Zod; `ZodError` and `ApiError` are mapped centrally to the one error shape.
 - **Stateless JWT auth** — bcrypt-hashed passwords, `{sub: userId}` tokens, `requireAuth` middleware sets `req.userId`. Login returns the same 401 for unknown email and wrong password to avoid account enumeration.
