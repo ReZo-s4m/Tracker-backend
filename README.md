@@ -4,6 +4,13 @@ REST API for the Task Tracker app: JWT authentication, owner-scoped task CRUD, f
 
 Frontend lives in the sibling repo `task-tracker-frontend`.
 
+## GitHub
+
+To publish the project on GitHub, push both repositories separately:
+
+- Backend: this repo
+- Frontend: the sibling `task-tracker-frontend` repo
+
 ## Setup
 
 Prerequisites: Node 20+, Docker (for MongoDB).
