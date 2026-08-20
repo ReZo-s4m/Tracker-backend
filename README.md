@@ -23,6 +23,17 @@ npm test
 
 Production build: `npm run build && npm start`.
 
+## Render
+
+This repo includes a `render.yaml` blueprint for deploying the API as a Render web service.
+
+Required environment variables on Render:
+
+- `MONGO_URI` pointing to a reachable MongoDB instance
+- `JWT_SECRET` set to a strong secret
+
+Health check path: `/api/health`
+
 ## API
 
 Base URL: `http://localhost:4000/api`. Authenticated routes require `Authorization: Bearer <token>`.
