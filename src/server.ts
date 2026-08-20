@@ -3,10 +3,14 @@ import { createApp } from './app';
 import { config } from './config';
 
 async function main() {
-  await mongoose.connect(config.mongoUri);
+  const app = createApp();
 
-  createApp().listen(config.port, '0.0.0.0', () => {
+  app.listen(config.port, '0.0.0.0', () => {
     console.log(`API listening on :${config.port}`);
+  });
+
+  mongoose.connect(config.mongoUri).catch((err) => {
+    console.error('MongoDB connection failed', err);
   });
 }
 
